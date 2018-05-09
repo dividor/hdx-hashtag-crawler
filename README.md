@@ -5,6 +5,7 @@ Requirements:
 - Python3
 - ckanapi package
 - libhxl package
+- requests package
 
 Setup:
 
