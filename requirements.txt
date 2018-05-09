@@ -1,2 +1,3 @@
 ckanapi
-libhxl>=1.7
+libhxl>=4.7
+requests
