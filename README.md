@@ -1,4 +1,4 @@
-Free script to crawl HDX and collect stats about hashtag usage
+Free script to crawl HDX and collect stats about HXL hashtag usage
 
 Requirements:
 
