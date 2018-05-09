@@ -1,0 +1,2 @@
+ckanapi
+libhxl>=1.7
