@@ -30,20 +30,24 @@ start = 0
 result_count = 999999 # just a big, big number; will reset on first search result
 
 output.writerow([
-    'Hashtag spec',
+    'Hashtag',
+    'Hashtag with attributes',
     'Text header',
     'Locations',
     'Data provider',
     'HDX dataset id',
+    'HDX resource id',
     'Date created',
 ])
     
 output.writerow([
     '#meta+tag',
+    '#meta+tagspec',
     '#meta+header',
     '#country+code+list',
     '#org+provider',
     '#meta+dataset',
+    '#meta+resource',
     '#date+created',
 ])
     
@@ -53,7 +57,7 @@ while start < result_count:
     logging.info("Read %d package(s)...", len(result['results']))
     for package in result['results']:
         package_id = package['name']
-        org_id = package['organization']['id']
+        org_id = package['organization']['name']
         location_ids = ' '.join([group['id'] for group in package['groups']])
         date_created = package['metadata_created'][:10]
         for resource in package['resources']:
@@ -62,16 +66,18 @@ while start < result_count:
                     for i, column in enumerate(source.columns):
                         if column.tag:
                             output.writerow([
+                                column.tag,
                                 column.get_display_tag(sort_attributes=True),
                                 column.header,
                                 location_ids,
                                 org_id,
                                 package_id,
+                                resource.get('id'),
                                 date_created,
                             ])
             except Exception as e:
                 logging.warning("Failed to parse as HXL (%s): %s", str(e), resource['url'])
-    start += CHUNK_SIZE # next chunk, but first ...
-    time.sleep(DELAY) # give HDX a short rest
+            time.sleep(DELAY) # give HDX a short rest
+    start += CHUNK_SIZE # next chunk
 
 # end
