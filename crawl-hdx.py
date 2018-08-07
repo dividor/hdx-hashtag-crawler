@@ -38,6 +38,7 @@ output.writerow([
     'HDX dataset id',
     'HDX resource id',
     'Date created',
+    'Hash'
 ])
     
 output.writerow([
@@ -49,6 +50,7 @@ output.writerow([
     '#meta+dataset',
     '#meta+resource',
     '#date+created',
+    '#meta+hash'
 ])
     
 while start < result_count:
@@ -63,6 +65,10 @@ while start < result_count:
         for resource in package['resources']:
             try:
                 with hxl.data(resource['url']) as source:
+                    # assumption is that two datasets with exactly the same hashtags+attributes
+                    # in exactly the same order are probably programmatic/API-based variants of
+                    # the same source data
+                    column_hash = hash(tuple([column.display_tag for column in source.columns]))
                     for i, column in enumerate(source.columns):
                         if column.tag:
                             output.writerow([
@@ -74,6 +80,7 @@ while start < result_count:
                                 package_id,
                                 resource.get('id'),
                                 date_created,
+                                hex(abs(column_hash)),
                             ])
             except Exception as e:
                 logging.warning("Failed to parse as HXL (%s): %s", str(e), resource['url'])
