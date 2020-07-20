@@ -54,7 +54,7 @@ output.writerow([
 ])
     
 while start < result_count:
-    result = ckan.action.package_search(fq='tags:hxl', start=start, rows=CHUNK_SIZE)
+    result = ckan.action.package_search(fq='vocab_Topics:hxl', start=start, rows=CHUNK_SIZE)
     result_count = result['count']
     logging.info("Read %d package(s)...", len(result['results']))
     for package in result['results']:
