@@ -11,6 +11,9 @@ $(DATA): $(VENV) $(SCRIPT)
 $(VENV):
 	rm -rf venv && python3 -m venv venv && pip3 install -r requirements.txt
 
+sync:
+	git checkout main && git pull origin main && git push origin main
+
 clean:
 	rm -rf venv
 
