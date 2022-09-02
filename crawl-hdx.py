@@ -19,8 +19,12 @@ CHUNK_SIZE=100
 CKAN_URL = 'https://data.humdata.org'
 """Base URL for the CKAN instance."""
 
+USER_AGENT='HDX-Developer-2015'
+"""User agent (for analytics)"""
+
+
 # Open a connection to HDX
-ckan = ckanapi.RemoteCKAN(CKAN_URL)
+ckan = ckanapi.RemoteCKAN(CKAN_URL, user_agent=USER_AGENT)
 
 # Open a CSV output stream
 output = csv.writer(sys.stdout)
@@ -64,7 +68,7 @@ while start < result_count:
         date_created = package['metadata_created'][:10]
         for resource in package['resources']:
             try:
-                with hxl.data(resource['url']) as source:
+                with hxl.data(resource['url'], user_agent=USER_AGENT) as source:
                     # assumption is that two datasets with exactly the same hashtags+attributes
                     # in exactly the same order are probably programmatic/API-based variants of
                     # the same source data
