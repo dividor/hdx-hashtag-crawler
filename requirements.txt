@@ -1,3 +1,4 @@
 ckanapi
+ckancrawler
 libhxl>=4.7
 requests
