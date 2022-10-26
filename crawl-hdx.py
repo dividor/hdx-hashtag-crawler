@@ -66,9 +66,10 @@ while start < result_count:
         org_id = package['organization']['name']
         location_ids = ' '.join([group['id'] for group in package['groups']])
         date_created = package['metadata_created'][:10]
+        input_options = hxl.input.InputOptions(http_headers={'User-Agent': USER_AGENT})
         for resource in package['resources']:
             try:
-                with hxl.data(resource['url'], user_agent=USER_AGENT) as source:
+                with hxl.data(resource['url'], input_options) as source:
                     # assumption is that two datasets with exactly the same hashtags+attributes
                     # in exactly the same order are probably programmatic/API-based variants of
                     # the same source data
