@@ -6,17 +6,15 @@ EXPANDED_SCRIPT=expand-data.py
 EXPANDED_DATA=$(OUTPUT_DIR)/hdx-expanded-stats.csv
 CKAN_TAG_SCRIPT=ckan-tags.py
 CKAN_TAG_DATA=$(OUTPUT_DIR)/hxl-ckan-tags.csv
+# HASHED_DATA=$(OUTPUT_DIR)/hdx-expanded-hashed-stats.csv
 
-DATA_SERIES_DATA=$(OUTPUT_DIR)/data-series.csv
+# DATA_SERIES_DATA=$(OUTPUT_DIR)/data-series.csv
 
-REPORTS=$(OUTPUT_DIR)/report-hashtags-by-data-series.csv \
+REPORTS=$(OUTPUT_DIR)/report-ckan-tag-count.csv \
+        $(OUTPUT_DIR)/report-hashtags-by-data-series.csv \
 	$(OUTPUT_DIR)/report-tagspecs-by-data-series.csv \
 	$(OUTPUT_DIR)/report-attributes-by-data-series.csv \
 	$(OUTPUT_DIR)/report-hashtag-attribute-pairs-by-data-series.csv \
-	$(OUTPUT_DIR)/report-hashtags-by-resource-type.csv \
-	$(OUTPUT_DIR)/report-tagspecs-by-resource-type.csv \
-	$(OUTPUT_DIR)/report-attributes-by-resource-type.csv \
-	$(OUTPUT_DIR)/report-hashtag-attribute-pairs-by-resource-type.csv \
 	$(OUTPUT_DIR)/report-hashtags-by-org.csv \
 	$(OUTPUT_DIR)/report-tagspecs-by-org.csv \
 	$(OUTPUT_DIR)/report-attributes-by-org.csv \
@@ -28,9 +26,11 @@ hashtag-data: $(HASHTAG_DATA)
 
 expanded-data: $(EXPANDED_DATA)
 
+# hashed-data: $(HASHED_DATA)
+
 ckan-tags: $(CKAN_TAG_DATA)
 
-data-series: $(DATA_SERIES_DATA)
+# data-series: $(DATA_SERIES_DATA)
 
 reports: $(REPORTS)
 
@@ -46,68 +46,45 @@ $(CKAN_TAG_DATA): $(VENV) $(CKAN_TAG_SCRIPT) $(DATA_SERIES_DATA)
 $(DATA_SERIES_DATA): $(VENV) $(HASHTAG_DATA)
 	. $(VENV) && cat $(HASHTAG_DATA) | hxlcut -i meta+dataset,meta+hash | hxlsort -t meta+hash | hxldedup -t meta+dataset > $@
 
+# $(HASHED_DATA): $(VENV) $(EXPANDED_DATA) $(DATA_SERIES_DATA)
+# 	. $(VENV) && cat $(EXPANDED_DATA) \
+# 	| hxlcut -x meta+hash \
+# 	| hxlmerge -m $(DATA_SERIES_DATA) -k meta+dataset -t meta+hash \
+# 	> $@
+
 # Reports
 
-$(OUTPUT_DIR)/report-hashtags-by-data-series.csv: $(HASHTAG_DATA) $(DATA_SERIES_DATA)
-	. $(VENV) && cat $(HASHTAG_DATA) \
-	| hxlcut -x meta+hash \
-	| hxlmerge -m $(DATA_SERIES_DATA) -k meta+dataset -t meta+hash \
-	| hxldedup -t meta+tag,meta+hash \
+$(OUTPUT_DIR)/report-ckan-tag-count.csv: $(CKAN_TAG_DATA)
+	. $(VENV) && cat $(CKAN_TAG_DATA) \
+	| hxldedup -t org+provider,meta+tag,meta+hash \
 	| hxlcount -t meta+tag \
 	| hxlsort -r -t meta+count \
 	> $@
 
-$(OUTPUT_DIR)/report-tagspecs-by-data-series.csv: $(HASHTAG_DATA) $(DATA_SERIES_DATA)
+$(OUTPUT_DIR)/report-hashtags-by-data-series.csv: $(HASHTAG_DATA)
 	. $(VENV) && cat $(HASHTAG_DATA) \
-	| hxlcut -x meta+hash \
-	| hxlmerge -m $(DATA_SERIES_DATA) -k meta+dataset -t meta+hash \
-	| hxldedup -t meta+tagspec,meta+hash \
-	| hxlcount -t meta+tagspec \
-	| hxlsort -r -t meta+count \
-	> $@
-
-$(OUTPUT_DIR)/report-attributes-by-data-series.csv: $(EXPANDED_DATA) $(DATA_SERIES_DATA)
-	. $(VENV) && cat $(EXPANDED_DATA) \
-	| hxlcut -x meta+hash \
-	| hxlmerge -m $(DATA_SERIES_DATA) -k meta+dataset -t meta+hash \
-	| hxldedup -t meta+attribute,meta+hash \
-	| hxlcount -t meta+attribute \
-	| hxlsort -r -t meta+count \
-	> $@
-
-$(OUTPUT_DIR)/report-hashtag-attribute-pairs-by-data-series.csv: $(EXPANDED_DATA) $(DATA_SERIES_DATA)
-	. $(VENV) && cat $(EXPANDED_DATA) \
-	| hxlcut -x meta+hash \
-	| hxlmerge -m $(DATA_SERIES_DATA) -k meta+dataset -t meta+hash \
-	| hxldedup -t meta+tag,meta+attribute,meta+hash \
-	| hxlcount -t meta+tag,meta+attribute \
-	| hxlsort -r -t meta+count \
-	> $@
-
-$(OUTPUT_DIR)/report-hashtags-by-resource-type.csv: $(HASHTAG_DATA)
-	. $(VENV) && cat $(HASHTAG_DATA) \
-	| hxldedup -t meta+tag,meta+hash \
+	| hxldedup -t meta+tag,org,meta+hash \
 	| hxlcount -t meta+tag \
 	| hxlsort -r -t meta+count \
 	> $@
 
-$(OUTPUT_DIR)/report-tagspecs-by-resource-type.csv: $(HASHTAG_DATA)
+$(OUTPUT_DIR)/report-tagspecs-by-data-series.csv: $(HASHTAG_DATA)
 	. $(VENV) && cat $(HASHTAG_DATA) \
-	| hxldedup -t meta+tagspec,meta+hash \
+	| hxldedup -t meta+tagspec,org,meta+hash \
 	| hxlcount -t meta+tagspec \
 	| hxlsort -r -t meta+count \
 	> $@
 
-$(OUTPUT_DIR)/report-attributes-by-resource-type.csv: $(EXPANDED_DATA)
+$(OUTPUT_DIR)/report-attributes-by-data-series.csv: $(EXPANDED_DATA)
 	. $(VENV) && cat $(EXPANDED_DATA) \
-	| hxldedup -t meta+attribute,meta+hash \
+	| hxldedup -t meta+attribute,org,meta+hash \
 	| hxlcount -t meta+attribute \
 	| hxlsort -r -t meta+count \
 	> $@
 
-$(OUTPUT_DIR)/report-hashtag-attribute-pairs-by-resource-type.csv: $(EXPANDED_DATA)
+$(OUTPUT_DIR)/report-hashtag-attribute-pairs-by-data-series.csv: $(EXPANDED_DATA)
 	. $(VENV) && cat $(EXPANDED_DATA) \
-	| hxldedup -t meta+tag,meta+attribute,hash \
+	| hxldedup -t meta+tag,meta+attribute,org,meta+hash \
 	| hxlcount -t meta+tag,meta+attribute \
 	| hxlsort -r -t meta+count \
 	> $@
