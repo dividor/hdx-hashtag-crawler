@@ -8,10 +8,8 @@ Started by David Megginson, 2018-05-09
 import ckanapi, hxl, logging, time, sys, csv
 
 # Set up a logger
-logging.basicConfig(stream=sys.stderr, level=logging.ERROR)
-
+logging.basicConfig(stream=sys.stderr, level=logging.INFO)
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 DELAY = 2
 """Time delay in seconds between datasets, to give HDX a break."""
@@ -22,7 +20,7 @@ CHUNK_SIZE=100
 CKAN_URL = 'https://data.humdata.org'
 """Base URL for the CKAN instance."""
 
-USER_AGENT='HDX-Developer-2015'
+USER_AGENT='HDXINTERNAL HXL hashtag analysis'
 """User agent (for analytics)"""
 
 

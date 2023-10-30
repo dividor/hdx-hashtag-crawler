@@ -11,7 +11,7 @@ SEARCH_FQ = 'vocab_Topics:hxl'
 """ CKAN tag for HXL
 """
 
-USER_AGENT = 'HDX-Developer-2015'
+USER_AGENT = 'HDXINTERNAL CKAN tag analysis for HXL'
 """ User agent to pass to CKAN (for analytics)
 """
 

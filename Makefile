@@ -34,6 +34,8 @@ data-series: $(DATA_SERIES_DATA)
 
 reports: $(REPORTS)
 
+refresh-venv: clean-venv $(VENV)
+
 #
 # Raw source datasets
 #
