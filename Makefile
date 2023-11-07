@@ -8,17 +8,20 @@ CKAN_TAG_SCRIPT=ckan-tags.py
 CKAN_TAG_DATA=$(OUTPUT_DIR)/hxl-ckan-tags.csv
 DATASET_HASHED_DATA=$(OUTPUT_DIR)/hdx-expanded-hashed-stats.csv
 
-DATA_SERIES_DATA=$(OUTPUT_DIR)/data-series.csv
+RESOURCE_PATTERN_DATA=$(OUTPUT_DIR)/resource-patterns.csv
 
-REPORTS=$(OUTPUT_DIR)/report-ckan-tag-count.csv \
-        $(OUTPUT_DIR)/report-hashtags-by-data-series.csv \
-	$(OUTPUT_DIR)/report-tagspecs-by-data-series.csv \
-	$(OUTPUT_DIR)/report-attributes-by-data-series.csv \
-	$(OUTPUT_DIR)/report-hashtag-attribute-pairs-by-data-series.csv \
-	$(OUTPUT_DIR)/report-hashtags-by-org.csv \
-	$(OUTPUT_DIR)/report-tagspecs-by-org.csv \
-	$(OUTPUT_DIR)/report-attributes-by-org.csv \
-	$(OUTPUT_DIR)/report-hashtag-attribute-pairs-by-org.csv
+REPORTS=$(OUTPUT_DIR)/report-resources-by-org.csv \
+	$(OUTPUT_DIR)/report-resource-patterns-by-org.csv \
+	$(OUTPUT_DIR)/report-resource-pattern-ratio-by-org.csv \
+	$(OUTPUT_DIR)/report-resource-patterns-by-ckan-tag.csv \
+        $(OUTPUT_DIR)/report-resource-patterns-by-hashtag.csv \
+	$(OUTPUT_DIR)/report-resource-patterns-by-attribute.csv \
+	$(OUTPUT_DIR)/report-resource-patterns-by-tagspec.csv \
+	$(OUTPUT_DIR)/report-resource-patterns-by-hashtag-attribute-pair.csv \
+	$(OUTPUT_DIR)/report-orgs-by-hashtag.csv \
+	$(OUTPUT_DIR)/report-orgs-by-attribute.csv \
+	$(OUTPUT_DIR)/report-orgs-by-tagspec.csv \
+	$(OUTPUT_DIR)/report-orgs-by-hashtag-attribute-pair.csv
 
 all: hashtag-data ckan-tags
 
@@ -30,7 +33,7 @@ dataset-hashed-data: $(DATASET_HASHED_DATA)
 
 ckan-tags: $(CKAN_TAG_DATA)
 
-data-series: $(DATA_SERIES_DATA)
+resource-pattern: $(RESOURCE_PATTERN_DATA)
 
 reports: $(REPORTS)
 
@@ -63,8 +66,8 @@ $(CKAN_TAG_DATA): $(VENV) $(CKAN_TAG_SCRIPT) $(DATASET_HASHED_DATA)
 		| hxlmerge -k meta+dataset -t meta+hash -m $(DATASET_HASHED_DATA) \
 		> $@
 
-# Produce data-series data that's hashed at the resource level
-$(DATA_SERIES_DATA): $(VENV) $(HASHTAG_DATA)
+# Produce resource-pattern data that's hashed at the resource level
+$(RESOURCE_PATTERN_DATA): $(VENV) $(HASHTAG_DATA)
 	mkdir -pv $(OUTPUT_DIR) \
 	&& . $(VENV) \
 	&& cat $(HASHTAG_DATA) \
@@ -73,89 +76,120 @@ $(DATA_SERIES_DATA): $(VENV) $(HASHTAG_DATA)
 		| hxldedup -t meta+dataset \
 		> $@
 
-# Produce data-series data that's hashed at the dataset level (for CKAN tags)
-$(DATASET_HASHED_DATA): $(VENV) $(EXPANDED_DATA) $(DATA_SERIES_DATA)
+# Produce resource-pattern data that's hashed at the dataset level (for CKAN tags)
+$(DATASET_HASHED_DATA): $(VENV) $(EXPANDED_DATA) $(RESOURCE_PATTERN_DATA)
 	mkdir -pv $(OUTPUT_DIR) \
 	&& . $(VENV) \
 	&& cat $(EXPANDED_DATA) \
 		| hxlcut -x meta+hash \
-		| hxlmerge -m $(DATA_SERIES_DATA) -k meta+dataset -t meta+hash \
+		| hxlmerge -m $(RESOURCE_PATTERN_DATA) -k meta+dataset -t meta+hash \
 		> $@
 
 #
 # Reports
 #
 
-$(OUTPUT_DIR)/report-ckan-tag-count.csv: $(CKAN_TAG_DATA)
+$(OUTPUT_DIR)/report-resources-by-org.csv: $(HASHTAG_DATA)
+	. $(VENV) \
+	&& cat $(HASHTAG_DATA) \
+		| hxldedup -t org+provider,meta+resource \
+		| hxlcount -t org+provider -a "count(org+provider) as Resources#indicator+resources+num" \
+		| hxlsort -r -t indicator+resources+num \
+		> $@
+
+$(OUTPUT_DIR)/report-resource-patterns-by-org.csv: $(HASHTAG_DATA)
+	. $(VENV) \
+	&& cat $(HASHTAG_DATA) \
+		| hxldedup -t org+provider,meta+hash \
+		| hxlcount -t org+provider -a "count(org+provider) as Resource patterns#indicator+resource_patterns+num" \
+		| hxlsort -r -t indicator+resource_patterns+num \
+		> $@
+
+$(OUTPUT_DIR)/report-resource-pattern-ratio-by-org.csv: $(OUTPUT_DIR)/report-resources-by-org.csv $(OUTPUT_DIR)/report-resource-patterns-by-org.csv
+	. $(VENV) \
+	&& cat $< \
+		| hxlmerge -m output/report-resource-patterns-by-org.csv -k org+provider -t indicator+resource_patterns+num \
+		| hxladd -s "Resource to pattern ratio#indicator+resource_to_pattern+ratio={{#indicator+resource_patterns+num/#indicator+resources+num}}" \
+		| hxlcut -i org+provider,indicator+ratio \
+		| hxlsort -r -t indicator+ratio \
+		> $@
+
+$(OUTPUT_DIR)/report-resource-patterns-by-ckan-tag.csv: $(CKAN_TAG_DATA)
 	. $(VENV) \
 	&& cat $(CKAN_TAG_DATA) \
 		| hxldedup -t org+provider,meta+tag,meta+hash \
-		| hxlcount -t meta+tag \
-		| hxlsort -r -t meta+count \
+		| hxlcount -t meta+tag -a "count(meta+tag) as Resource patterns#indicator+resource_patterns+num" \
+		| hxlsort -r -t indicator+resource_patterns+num \
 		> $@
 
-$(OUTPUT_DIR)/report-hashtags-by-data-series.csv: $(HASHTAG_DATA)
+$(OUTPUT_DIR)/report-resource-patterns-by-hashtag.csv: $(HASHTAG_DATA)
 	. $(VENV) \
 	&& cat $(HASHTAG_DATA) \
 		| hxldedup -t meta+tag,org,meta+hash \
-		| hxlcount -t meta+tag \
-		| hxlsort -r -t meta+count \
+		| hxlcount -t meta+tag -a "count(meta+tag) as Resource patterns#indicator+resource_patterns+num" \
+		| hxlsort -r -t indicator+resource_patterns+num \
 		> $@
 
-$(OUTPUT_DIR)/report-tagspecs-by-data-series.csv: $(HASHTAG_DATA)
+$(OUTPUT_DIR)/report-resource-patterns-by-attribute.csv: $(EXPANDED_DATA)
+	. $(VENV) \
+	&& cat $(EXPANDED_DATA) \
+		| hxlselect -r -q 'meta+attribute=+' \
+		| hxldedup -t meta+attribute,org,meta+hash \
+		| hxlcount -t meta+attribute -a "count(meta+attribute) as Resource patterns#indicator+resource_patterns+num" \
+		| hxlsort -r -t indicator+resource_patterns+num \
+		> $@
+
+$(OUTPUT_DIR)/report-resource-patterns-by-tagspec.csv: $(HASHTAG_DATA)
 	. $(VENV) \
 	&& cat $(HASHTAG_DATA) \
 		| hxldedup -t meta+tagspec,org,meta+hash \
-		| hxlcount -t meta+tagspec \
-		| hxlsort -r -t meta+count \
+		| hxlcount -t meta+tagspec -a "count(meta+tagspec) as Resource patterns#indicator+resource_patterns+num" \
+		| hxlsort -r -t indicator+resource_patterns+num \
 		> $@
 
-$(OUTPUT_DIR)/report-attributes-by-data-series.csv: $(EXPANDED_DATA)
+$(OUTPUT_DIR)/report-resource-patterns-by-hashtag-attribute-pair.csv: $(EXPANDED_DATA)
 	. $(VENV) \
 	&& cat $(EXPANDED_DATA) \
-		| hxldedup -t meta+attribute,org,meta+hash \
-		| hxlcount -t meta+attribute \
-		| hxlsort -r -t meta+count \
-		> $@
-
-$(OUTPUT_DIR)/report-hashtag-attribute-pairs-by-data-series.csv: $(EXPANDED_DATA)
-	. $(VENV) \
-	&& cat $(EXPANDED_DATA) \
+		| hxlselect -r -q 'meta+attribute=+' \
 		| hxldedup -t meta+tag,meta+attribute,org,meta+hash \
-		| hxlcount -t meta+tag,meta+attribute \
-		| hxlsort -r -t meta+count \
+		| hxladd -s "Hashtag+attribute pair#meta+pair={{#meta+tag}}{{#meta+attribute}}" \
+		| hxlcount -t meta+pair -a "count(meta+pair) as Resource patterns#indicator+resource_patterns+num" \
+		| hxlsort -r -t indicator+resource_patterns+num \
 		> $@
 
-$(OUTPUT_DIR)/report-hashtags-by-org.csv: $(HASHTAG_DATA)
+$(OUTPUT_DIR)/report-orgs-by-hashtag.csv: $(HASHTAG_DATA)
 	. $(VENV) \
 	&& cat $(HASHTAG_DATA) \
 		| hxldedup -t meta+tag,org \
-		| hxlcount -t meta+tag \
-		| hxlsort -r -t meta+count \
+		| hxlcount -t meta+tag -a "count(meta+tag) as Provider orgs#indicator+provider_orgs+num" \
+		| hxlsort -r -t indicator+provider_orgs+num \
 		> $@
 
-$(OUTPUT_DIR)/report-tagspecs-by-org.csv: $(HASHTAG_DATA)
+$(OUTPUT_DIR)/report-orgs-by-attribute.csv: $(EXPANDED_DATA)
+	. $(VENV) \
+	&& cat $(EXPANDED_DATA) \
+		| hxlselect -r -q 'meta+attribute=+' \
+		| hxldedup -t meta+attribute,org \
+		| hxlcount -t meta+attribute -a "count(meta+attribute) as Provider orgs#indicator+provider_orgs+num" \
+		| hxlsort -r -t indicator+provider_orgs+num \
+		> $@
+
+$(OUTPUT_DIR)/report-orgs-by-tagspec.csv: $(HASHTAG_DATA)
 	. $(VENV) \
 	&& cat $(HASHTAG_DATA) \
 		| hxldedup -t meta+tagspec,org \
-		| hxlcount -t meta+tagspec \
-		| hxlsort -r -t meta+count \
+		| hxlcount -t meta+tagspec -a "count(meta+tagspec) as Provider orgs#indicator+provider_orgs+num" \
+		| hxlsort -r -t indicator+provider_orgs+num \
 		> $@
 
-$(OUTPUT_DIR)/report-attributes-by-org.csv: $(EXPANDED_DATA)
+$(OUTPUT_DIR)/report-orgs-by-hashtag-attribute-pair.csv: $(EXPANDED_DATA)
 	. $(VENV) \
 	&& cat $(EXPANDED_DATA) \
-		| hxldedup -t meta+attribute,org \
-		| hxlcount -t meta+attribute \
-		| hxlsort -r -t meta+count \
-		> $@
-
-$(OUTPUT_DIR)/report-hashtag-attribute-pairs-by-org.csv: $(EXPANDED_DATA)
-	. $(VENV) \
-	&& cat $(EXPANDED_DATA) \
+	        | hxlselect -r -q "#meta+attribute=+" \
 		| hxldedup -t meta+tag,meta+attribute,org \
-		| hxlcount -t meta+tag,meta+attribute \
-		| hxlsort -r -t meta+count \
+		| hxladd -s "Hashtag+attribute pair#meta+pair={{#meta+tag}}{{#meta+attribute}}" \
+		| hxlcount -t meta+pair -a "count(meta+pair) as Provider orgs#indicator+provider_orgs+num" \
+		| hxlsort -r -t indicator+provider_orgs+num \
 		> $@
 
 #
