@@ -43,7 +43,8 @@ output.writerow([
     'HDX dataset id',
     'HDX resource id',
     'Date created',
-    'Hash'
+    'Hash',
+    'Quick Charts',
 ])
     
 output.writerow([
@@ -55,7 +56,8 @@ output.writerow([
     '#meta+dataset',
     '#meta+resource',
     '#date+created',
-    '#meta+hash'
+    '#meta+hash',
+    '#meta+has_quickcharts',
 ])
     
 while start < result_count:
@@ -87,6 +89,7 @@ while start < result_count:
                                 resource.get('id'),
                                 date_created,
                                 hex(abs(column_hash)),
+                                'true' if package['has_quickcharts'] else 'false',
                             ])
             except Exception as e:
                 logger.warning("Failed to parse as HXL (%s): %s", str(e), resource['url'])
