@@ -8,7 +8,7 @@ Started by David Megginson, 2018-05-09
 import ckanapi, hxl, logging, time, sys, csv
 
 # Set up a logger
-logging.basicConfig(stream=sys.stderr, level=logging.INFO)
+logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
 DELAY = 2
@@ -63,7 +63,6 @@ output.writerow([
 while start < result_count:
     result = ckan.action.package_search(fq='vocab_Topics:hxl', start=start, rows=CHUNK_SIZE)
     result_count = result['count']
-    logger.info("Read %d package(s)...", len(result['results']))
     for package in result['results']:
         package_id = package['name']
         org_id = package['organization']['name']
@@ -92,7 +91,7 @@ while start < result_count:
                                 'true' if package['has_quickcharts'] else 'false',
                             ])
             except Exception as e:
-                logger.warning("Failed to parse as HXL (%s): %s", str(e), resource['url'])
+                logger.warning("Failed to parse resource %s in dataset %s as HXL (%s): %s", resource['id'], package['name'], str(e), resource['url'])
             time.sleep(DELAY) # give HDX a short rest
     start += CHUNK_SIZE # next chunk
 
