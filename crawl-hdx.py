@@ -5,7 +5,7 @@ Python CKAN library: https://github.com/ckan/ckanapi
 Started by David Megginson, 2018-05-09
 """
 
-import ckanapi, hxl, logging, time, sys, csv
+import ckanapi, hxl, logging, time, sys, csv, json, os
 
 # Set up a logger
 logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
@@ -23,6 +23,7 @@ CKAN_URL = 'https://data.humdata.org'
 USER_AGENT='HDXINTERNAL HXL hashtag analysis'
 """User agent (for analytics)"""
 
+DATA_DIR = './data'
 
 # Open a connection to HDX
 ckan = ckanapi.RemoteCKAN(CKAN_URL, user_agent=USER_AGENT)
@@ -59,7 +60,30 @@ output.writerow([
     '#meta+hash',
     '#meta+has_quickcharts',
 ])
-    
+
+if not os.path.exists('./data'):
+    os.makedirs('./data')
+
+def save_data(resource, source):
+
+    file_name_stub = f"{resource['name'].replace(' ', '_')}_{resource['id']}"
+    metadata_file_name = f'./data/{file_name_stub}_metadata.json'
+    data_file_name = f'./data/{file_name_stub}.{resource["format"]}'
+
+    # No need to write again if we already have the data
+    if os.path.exists(metadata_file_name) and os.path.exists(data_file_name):
+        logger.info(f"Skipping {resource['id']} as it already exists")
+        return
+
+    with open(f'./data/{file_name_stub}_metadata.json', 'w') as f:
+        f.write(json.dumps(resource, indent=2))
+          
+    with open(f'./data/{file_name_stub}.{resource["format"]}', 'w') as f:
+        writer = csv.writer(f)
+        writer.writerow([column.display_tag for column in source.columns])
+        for row in source:
+            writer.writerow(row.values)
+
 while start < result_count:
     result = ckan.action.package_search(fq='vocab_Topics:hxl', start=start, rows=CHUNK_SIZE)
     result_count = result['count']
@@ -72,6 +96,10 @@ while start < result_count:
         for resource in package['resources']:
             try:
                 with hxl.data(resource['url'], input_options) as source:
+
+                    # save the data
+                    save_data(resource, source)
+                    
                     # assumption is that two datasets with exactly the same hashtags+attributes
                     # in exactly the same order are probably programmatic/API-based variants of
                     # the same source data
