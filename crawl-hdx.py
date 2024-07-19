@@ -28,8 +28,19 @@ DATA_DIR = './data'
 # Open a connection to HDX
 ckan = ckanapi.RemoteCKAN(CKAN_URL, user_agent=USER_AGENT)
 
-# Open a CSV output stream
-output = csv.writer(sys.stdout)
+results_file = f'{DATA_DIR}/results.csv'
+
+# If results file exists get list of resource_ids
+# If not, create a new file
+processed_resources = []
+if os.path.exists(results_file):
+    with open(results_file, 'r') as f:
+        reader = csv.reader(f)
+        for row in reader:
+            processed_resources.append(row[6])
+    output = csv.writer(open(results_file, 'a'))
+else:
+    output = csv.writer(open(results_file, 'w'))
 
 # Iterate through all the datasets ("packages") and resources on HDX
 start = 0
@@ -70,23 +81,20 @@ def save_data(resource, source):
     metadata_file_name = f'./data/{file_name_stub}_metadata.json'
     data_file_name = f'./data/{file_name_stub}.{resource["format"]}'
 
-    # No need to write again if we already have the data
-    if os.path.exists(metadata_file_name) and os.path.exists(data_file_name):
-        logger.info(f"Skipping {resource['id']} as it already exists")
-        return
-
-    with open(f'./data/{file_name_stub}_metadata.json', 'w') as f:
+    with open(metadata_file_name, 'w') as f:
         f.write(json.dumps(resource, indent=2))
           
-    with open(f'./data/{file_name_stub}.{resource["format"]}', 'w') as f:
+    with open(data_file_name, 'w') as f:
         writer = csv.writer(f)
         writer.writerow([column.display_tag for column in source.columns])
         for row in source:
             writer.writerow(row.values)
 
+
 while start < result_count:
     result = ckan.action.package_search(fq='vocab_Topics:hxl', start=start, rows=CHUNK_SIZE)
     result_count = result['count']
+    print(f"{start/result_count*100:.2f}%")
     for package in result['results']:
         package_id = package['name']
         org_id = package['organization']['name']
@@ -94,10 +102,20 @@ while start < result_count:
         date_created = package['metadata_created'][:10]
         input_options = hxl.input.InputOptions(http_headers={'User-Agent': USER_AGENT})
         for resource in package['resources']:
+
+            resource_id = resource.get('id')
+
+            # Skip resources that have already been processed and saved, so script can be restarted
+            if resource_id in processed_resources:
+                print(f"    Skipping {resource_id}, already processed")
+                continue
+            else:
+                print(f"    Processing {resource_id}")
+
             try:
                 with hxl.data(resource['url'], input_options) as source:
 
-                    # save the data
+                    # Save the data for file
                     save_data(resource, source)
                     
                     # assumption is that two datasets with exactly the same hashtags+attributes
@@ -113,11 +131,12 @@ while start < result_count:
                                 location_ids,
                                 org_id,
                                 package_id,
-                                resource.get('id'),
+                                resource_id,
                                 date_created,
                                 hex(abs(column_hash)),
                                 'true' if package['has_quickcharts'] else 'false',
                             ])
+                    processed_resources.append(resource_id)
             except Exception as e:
                 logger.warning("Failed to parse resource %s in dataset %s as HXL (%s): %s", resource['id'], package['name'], str(e), resource['url'])
             time.sleep(DELAY) # give HDX a short rest

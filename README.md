@@ -13,7 +13,10 @@ Free script to crawl HDX and collect stats about HXL hashtag usage
 
 ## Usage
 
-    python3 crawl-hdx.py > results.csv
+    python3 crawl-hdx.py 
+
+The script will save results into folder `./data/results.csv`. If the script is stopped and restarted, it will skip
+previously processed resources. To start fresh, delete the contents of `./data/`.
 
 ## Analysing the results
 
